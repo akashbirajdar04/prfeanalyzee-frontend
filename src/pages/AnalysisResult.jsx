@@ -234,7 +234,7 @@ const AnalysisResult = () => {
 
 startSDK({
   serviceName: 'user-service',
-  endpoint: 'http://localhost:5000/api/telemetry',
+  endpoint: 'https://prfeai-backend.onrender.com/api/telemetry',
   headers: {
     'x-session-id': '${id}'
   }
