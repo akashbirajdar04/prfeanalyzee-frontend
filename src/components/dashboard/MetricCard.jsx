@@ -6,26 +6,39 @@ const MetricCard = ({ title, value, change, trend = 'neutral', icon: Icon = Acti
     const isNegative = trend === 'down';
 
     return (
-        <Card className="hover:border-slate-700 transition-colors">
-            <CardContent>
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-indigo-500/10 rounded-lg">
-                        <Icon className="w-6 h-6 text-indigo-400" />
+        <Card className="h-full flex flex-col justify-between" hoverEffect={true}>
+            <CardContent className="flex flex-col h-full space-y-4">
+                <div className="flex justify-between items-start">
+                    <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 shadow-inner">
+                        <Icon className="w-5 h-5 text-indigo-400" />
                     </div>
                     {change && (
-                        <div className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400'
+                        <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${isPositive
+                                ? 'text-green-400 bg-green-500/10 border border-green-500/20'
+                                : isNegative
+                                    ? 'text-red-400 bg-red-500/10 border border-red-500/20'
+                                    : 'text-slate-400 bg-slate-800'
                             }`}>
-                            {isPositive ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                            {isPositive ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
                             {change}
                         </div>
                     )}
                 </div>
 
-                <div>
-                    <h3 className="text-slate-400 text-sm font-medium mb-1">{title}</h3>
-                    <div className="text-2xl font-bold text-slate-100">{value}</div>
-                    {description && <p className="text-slate-500 text-xs mt-2">{description}</p>}
+                <div className="space-y-1 flex-grow">
+                    <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest">{title}</h3>
+                    <div className="text-3xl font-black text-slate-100 tabular-nums tracking-tight">
+                        {value}
+                    </div>
                 </div>
+
+                {description && (
+                    <div className="pt-3 border-t border-slate-800/40">
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider leading-tight">
+                            {description}
+                        </p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

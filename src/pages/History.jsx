@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Calendar, Globe, ArrowRight, Search } from 'lucide-react';
+import analysisService from '../services/analysisService';
 
 const History = () => {
     const [sessions, setSessions] = useState([]);
@@ -11,15 +12,22 @@ const History = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Mock data fetching
-        const mockHistory = [
-            { id: 1, url: 'https://google.com', date: '2023-10-25', status: 'completed', score: 90 },
-            { id: 2, url: 'https://example.com', date: '2023-10-24', status: 'completed', score: 78 },
-            { id: 3, url: 'https://test-site.io', date: '2023-10-23', status: 'failed', score: 0 },
-            { id: 4, url: 'https://myshop.com', date: '2023-10-22', status: 'completed', score: 45 },
-            { id: 5, url: 'https://blog.dev', date: '2023-10-21', status: 'completed', score: 98 },
-        ];
-        setSessions(mockHistory);
+        const fetchHistory = async () => {
+            try {
+                const response = await analysisService.getAllSessions();
+                const formatted = response.data.map(s => ({
+                    id: s._id,
+                    url: s.targetUrl,
+                    date: new Date(s.createdAt).toLocaleDateString(),
+                    status: s.status,
+                    score: s.metrics?.performance?.score || 0
+                }));
+                setSessions(formatted);
+            } catch (error) {
+                console.error("Failed to fetch history", error);
+            }
+        };
+        fetchHistory();
     }, []);
 
     const filteredSessions = sessions.filter(session =>
@@ -49,56 +57,60 @@ const History = () => {
                 </div>
             </div>
 
-            <Card>
+            <Card hoverEffect={false}>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-400">
-                        <thead className="bg-slate-900/50 text-slate-200 font-medium uppercase text-xs">
+                    <table className="w-full text-left text-sm text-slate-400 border-collapse">
+                        <thead className="bg-white/5 text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] border-b border-slate-800/60">
                             <tr>
-                                <th className="px-6 py-4">URL</th>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-center">Score</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-8 py-5">Target Endpoint</th>
+                                <th className="px-8 py-5">Date Analyzed</th>
+                                <th className="px-8 py-5">System Status</th>
+                                <th className="px-8 py-5 text-center">Perf Index</th>
+                                <th className="px-8 py-5 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-slate-800/60">
                             {filteredSessions.map((session) => (
-                                <tr key={session.id} className="hover:bg-slate-800/30 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-slate-200 flex items-center gap-2">
-                                        <Globe className="w-4 h-4 text-slate-500" />
-                                        {session.url}
+                                <tr key={session.id} className="hover:bg-white/5 transition-all duration-300 group">
+                                    <td className="px-8 py-5 font-black text-slate-100 uppercase text-xs tracking-widest group-hover:text-indigo-400 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="w-4 h-4 text-slate-600 group-hover:text-indigo-500 transition-colors" />
+                                            {session.url}
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-slate-500" />
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-2 font-bold text-[10px] uppercase text-slate-500">
+                                            <Calendar className="w-3.5 h-3.5" />
                                             {session.date}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <Badge variant={session.status === 'completed' ? 'success' : 'danger'}>
-                                            {session.status}
-                                        </Badge>
+                                    <td className="px-8 py-5">
+                                        <div className="flex">
+                                            <Badge variant={session.status === 'completed' ? 'success' : 'danger'} className="uppercase text-[10px] font-black tracking-widest px-3 py-1">
+                                                {session.status}
+                                            </Badge>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 text-center">
+                                    <td className="px-8 py-5 text-center">
                                         {session.score > 0 ? (
-                                            <span className={`font-bold ${session.score >= 90 ? 'text-green-400' :
-                                                    session.score >= 50 ? 'text-amber-400' : 'text-red-400'
+                                            <span className={`text-xl font-black tabular-nums ${session.score >= 90 ? 'text-green-400' :
+                                                session.score >= 50 ? 'text-amber-400' : 'text-red-400'
                                                 }`}>
                                                 {session.score}
                                             </span>
-                                        ) : '-'}
+                                        ) : <span className="text-slate-700 font-black">---</span>}
                                     </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <Button size="sm" variant="ghost" onClick={() => navigate(`/analysis/${session.id}`)}>
-                                            Details <ArrowRight className="w-4 h-4 ml-1" />
+                                    <td className="px-8 py-5 text-right">
+                                        <Button size="sm" variant="ghost" className="rounded-full text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 font-bold uppercase text-[10px] tracking-widest py-2 px-4" onClick={() => navigate(`/analysis/${session.id}`)}>
+                                            Explore <ArrowRight className="w-3.5 h-3.5 ml-2" />
                                         </Button>
                                     </td>
                                 </tr>
                             ))}
                             {filteredSessions.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                                        No history found matching your search.
+                                    <td colSpan={5} className="px-8 py-24 text-center text-slate-500 font-bold uppercase text-xs tracking-widest italic">
+                                        No metrics found matching your query.
                                     </td>
                                 </tr>
                             )}

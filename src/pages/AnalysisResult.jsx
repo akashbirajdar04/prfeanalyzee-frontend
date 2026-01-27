@@ -15,37 +15,6 @@ const AnalysisResult = () => {
     const [showDashboard, setShowDashboard] = useState(false);
     const [loadingStage, setLoadingStage] = useState(0); // 0: Start, 1: Lighthouse Done
 
-    // Mock Data
-    const mockData = {
-        url: 'https://example.com',
-        date: 'Oct 26, 2023',
-        performance: {
-            lcp: null,
-            cls: null,
-            inp: null,
-            ttfb: null,
-            fcp: null,
-            si: null,
-            tbt: null,
-            score: null
-        },
-        seo: {
-            score: 88,
-            issues: [
-                { title: 'Missing Meta Description', severity: 'medium', description: 'The page lacks a meta description tag.' },
-                { title: 'Images missing Alt text', severity: 'low', description: '3 images have no alt attribute.' }
-            ]
-        },
-        api: [
-            { endpoint: '/api/v1/users', method: 'GET', avgLatency: 45, p95: 120, isSlow: false },
-            { endpoint: '/api/v1/products', method: 'GET', avgLatency: 850, p95: 1200, isSlow: true },
-            { endpoint: '/api/v1/cart', method: 'POST', avgLatency: 120, p95: 300, isSlow: false },
-        ],
-        ai: [
-            { title: 'Optimize Product API', category: 'Backend', severity: 'high', description: 'The /products endpoint is significantly slower than average (850ms).', suggestedFix: 'Add pagination (limit=20) and index the "category" column in the database.' },
-            { title: 'Lazy Load Hero Image', category: 'Frontend', severity: 'medium', description: 'LCP is slightly impacted by the hero image.', suggestedFix: 'Add fetchpriority="high" to the hero image and verify cache headers.' }
-        ]
-    };
 
     const [error, setError] = useState(null);
 
@@ -56,24 +25,30 @@ const AnalysisResult = () => {
 
                 // Always update data to show URL and basic info even if running
                 const currentData = response.data;
+                console.log(`[Frontend] Received session data:`, currentData);
                 const backendMetrics = currentData.metrics || {};
                 const mergedData = {
-                    ...mockData,
                     ...currentData,
                     ...currentData.artifacts,
-                    performance: { ...mockData.performance, ...backendMetrics.performance },
-                    seo: { ...mockData.seo, ...backendMetrics.seo }
+                    performance: backendMetrics.performance || {},
+                    seo: backendMetrics.seo || { score: 0, issues: [] },
+                    ai: backendMetrics.ai || [],
+                    api: backendMetrics.api || []
                 };
 
                 setData(mergedData);
 
-                if (currentData.status === 'completed' || currentData.status === 'waiting_for_telemetry') {
-                    setLoadingStage(1); // Lighthouse Done
+                if (currentData.status === 'completed') {
+                    setLoadingStage(1); // Final AI Done
+                } else if (currentData.status === 'waiting_for_telemetry') {
+                    setLoadingStage(1); // Lighthouse Done, now waiting for data
+                    // Keep polling to see incoming telemetry count
+                    setTimeout(fetchData, 3000);
                 } else if (currentData.status === 'failed') {
                     setError('Analysis failed.');
                 } else {
                     // Still running initial LH, poll again
-                    setTimeout(fetchData, 3000);
+                    setTimeout(fetchData, 2000);
                 }
             } catch (err) {
                 console.error(err);
@@ -94,7 +69,25 @@ const AnalysisResult = () => {
         }
     };
 
-    if (error) return <div className="p-10 text-center text-red-500">{error}</div>;
+    if (error) return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-100 mb-2">Analysis Failed</h2>
+            <p className="text-slate-400 max-w-md mb-6">{error}</p>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg text-left text-sm max-w-lg mb-8">
+                <p className="text-slate-500 mb-2 font-mono">DEBUG INFO:</p>
+                <p className="text-red-400 font-mono break-all">{data?.error?.message || 'Unknown error occurred during processing.'}</p>
+            </div>
+            <Button onClick={() => window.location.href = '/analysis/new'} variant="outline">
+                Try Another URL
+            </Button>
+            <p className="mt-4 text-xs text-slate-500">
+                Tip: Ensure the URL is accessible from the public internet and not a local development server like localhost.
+            </p>
+        </div>
+    );
 
     // Loading / Summary View
     if (!showDashboard) {
@@ -126,7 +119,7 @@ const AnalysisResult = () => {
 
                                 <div className="text-center">
                                     <h3 className={`text-4xl font-bold ${loadingStage === 1 ? 'text-green-400' : 'text-indigo-400'}`}>
-                                        {loadingStage === 1 ? data?.performance?.score || 92 : '...'}
+                                        {loadingStage === 1 ? data?.performance?.score || 0 : '...'}
                                     </h3>
                                     <p className="text-xs uppercase tracking-wider text-slate-500 mt-1">
                                         Performance<br />Score
@@ -172,7 +165,7 @@ const AnalysisResult = () => {
         );
     }
 
-    const isWaitingForTelemetry = data.status === 'waiting_for_telemetry';
+    const isWaitingForTelemetry = data?.status === 'waiting_for_telemetry';
 
     return (
         <div className="space-y-8 pb-10">
@@ -183,7 +176,7 @@ const AnalysisResult = () => {
                         Analysis Report
                     </h1>
                     <p className="text-slate-400 mt-1">
-                        {data.targetUrl || data.url} • <span className="text-slate-500">{new Date(data.createdAt || data.date).toLocaleDateString()}</span>
+                        {data.targetUrl || data.url || 'No URL info'} • <span className="text-slate-500">{new Date(data.createdAt || Date.now()).toLocaleDateString()}</span>
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -196,39 +189,113 @@ const AnalysisResult = () => {
                 </div>
             </div>
 
-            {/* SDK Installation Banner - Only if waiting for telemetry */}
+            {/* SDK Integration Guide - Only if waiting for telemetry */}
             {isWaitingForTelemetry && (
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8 border-l-4 border-l-indigo-500">
-                    <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-indigo-400" />
-                        Complete Your Analysis
-                    </h2>
-                    <p className="text-slate-400 mb-4">
-                        Lighthouse analysis is complete! To get <strong className="text-indigo-300">Backend Latency</strong> and <strong className="text-purple-300">AI Insights</strong>, please install our SDK.
-                    </p>
-
-                    <div className="bg-slate-950 p-4 rounded-lg font-mono text-sm border border-slate-800 overflow-x-auto mb-4">
-                        <div className="flex justify-between text-slate-500 mb-2">
-                            <span>// 1. Install SDK</span>
-                            <span>// 2. Add to your app</span>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8 shadow-2xl shadow-indigo-500/5">
+                    <div className="bg-indigo-600/10 px-6 py-4 flex items-center justify-between border-b border-slate-800">
+                        <div className="flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-indigo-400" />
+                            <h2 className="text-xl font-bold text-slate-100">Complete Calibration</h2>
                         </div>
-                        <div className="space-y-2">
-                            <p className="text-indigo-300">npm install ai-perf-sdk</p>
-                            <p className="text-slate-300 border-t border-slate-800 pt-2 mt-2">
-                                <span className="text-purple-400">const</span> {'{'} initPerformanceSDK {'}'} = <span className="text-purple-400">require</span>(<span className="text-green-400">'ai-perf-sdk'</span>);<br />
-                                initPerformanceSDK({'{'} collectorEndpoint: <span className="text-green-400">'{import.meta.env.VITE_API_URL?.replace('/api', '/api/telemetry') || 'https://prfeai-backend.onrender.com/api/telemetry'}'</span>, headers: {'{'} <span className="text-green-400">'x-session-id'</span>: <span className="text-green-400">'{id}'</span> {'}'} {'}'});
-                            </p>
+                        <div className="flex items-center gap-2 text-xs font-mono text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                            WAITING FOR TELEMETRY
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <Button onClick={handleGenerateAI} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                            <Brain className="w-4 h-4 mr-2" />
-                            ByPass & Generate AI (Demo)
-                        </Button>
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Goal</h3>
+                                <p className="text-slate-300 text-sm leading-relaxed">
+                                    Capture real-world traffic data (latency, status codes, and errors) to generate deep AI recommendations for your backend services.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex gap-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-indigo-400 font-bold text-sm">1</div>
+                                    <div className="flex-1">
+                                        <h4 className="text-slate-200 font-medium mb-1">Install the SDK</h4>
+                                        <div className="bg-black/40 p-3 rounded-lg border border-slate-800 font-mono text-sm group flex justify-between items-center">
+                                            <code className="text-indigo-300">npm install ai-perf-sdk@latest</code>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-indigo-400 font-bold text-sm">2</div>
+                                    <div className="flex-1">
+                                        <h4 className="text-slate-200 font-medium mb-1">Initialize at Entry Point</h4>
+                                        <p className="text-slate-500 text-xs mb-3">Paste this at the VERY TOP of your `index.js` or `app.js` file before any other imports.</p>
+                                        <div className="bg-black/40 p-4 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 relative group">
+                                            <pre className="overflow-x-auto">
+                                                {`import { startSDK } from 'ai-perf-sdk';
+
+startSDK({
+  serviceName: 'user-service',
+  endpoint: 'http://localhost:5000/api/telemetry',
+  headers: {
+    'x-session-id': '${id}'
+  }
+});`}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-indigo-400 font-bold text-sm">3</div>
+                                    <div className="flex-1">
+                                        <h4 className="text-slate-200 font-medium mb-1">Verify Activity</h4>
+                                        <p className="text-slate-500 text-xs">Refresh your website and navigate around. You should see "Captured APIs" increase below.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-950/50 rounded-xl border border-slate-800 p-6 flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Live Status</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${data?.metrics?.api?.length > 0 ? 'bg-green-500 animate-pulse outline outline-offset-2 outline-green-500/20' : 'bg-slate-700'}`}></span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{data?.metrics?.api?.length > 0 ? 'Data Receiving' : 'No Data Yet'}</span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800/50 text-center">
+                                        <div className="text-2xl font-bold text-slate-100">{data?.metrics?.api?.length || 0}</div>
+                                        <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Captured Routes</div>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-lg border border-slate-800/50 text-center">
+                                        <div className="text-2xl font-bold text-slate-100">{loadingStage === 1 ? '100%' : '0%'}</div>
+                                        <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">LH Completion</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-8">
+                                {data?.metrics?.api?.length > 0 ? (
+                                    <Button
+                                        onClick={handleGenerateAI}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 py-8 text-lg rounded-xl flex items-center justify-center gap-3 active:scale-95 transition-all group"
+                                    >
+                                        <Brain className="w-6 h-6 animate-pulse group-hover:rotate-12 transition-transform" />
+                                        Generate Final AI Insights
+                                    </Button>
+                                ) : (
+                                    <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-center">
+                                        <p className="text-xs text-slate-500 italic">Generate insights once telemetry data is captured.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
+
 
             {/* Tabs */}
             <div className="flex border-b border-slate-800">
@@ -253,11 +320,11 @@ const AnalysisResult = () => {
             <div className="animate-fade-in">
                 {activeTab === 'performance' && (
                     <div className="space-y-6">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <MetricCard title="Performance Score" value={data.performance.score} trend="neutral" icon={Zap} />
-                            <MetricCard title="LCP" value={data.performance.lcp} trend={parseFloat(data.performance.lcp) > 2.5 ? 'down' : 'up'} icon={Activity} />
-                            <MetricCard title="CLS" value={data.performance.cls} trend={parseFloat(data.performance.cls) > 0.1 ? 'down' : 'up'} icon={Activity} />
-                            <MetricCard title="TTFB" value={data.performance.ttfb} description="Time to First Byte" icon={Server} />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 auto-rows-fr">
+                            <MetricCard title="Performance Score" value={data.performance.score} trend="neutral" icon={Zap} description="Composite Weight" />
+                            <MetricCard title="LCP" value={data.performance.lcp} trend={parseFloat(data.performance.lcp) > 2.5 ? 'down' : 'up'} icon={Activity} description="Paint Benchmark" />
+                            <MetricCard title="CLS" value={data.performance.cls} trend={parseFloat(data.performance.cls) > 0.1 ? 'down' : 'up'} icon={Activity} description="Visual Stability" />
+                            <MetricCard title="TTFB" value={data.performance.ttfb} description="Endpoint Response" icon={Server} />
                         </div>
                         <Card>
                             <CardHeader><CardTitle>Core Web Vitals</CardTitle></CardHeader>
@@ -307,17 +374,33 @@ const AnalysisResult = () => {
                                     AI Executive Summary
                                 </h3>
                                 <p className="text-slate-300 leading-relaxed">
-                                    Based on the analysis, your application performs well on the frontend but suffers from significant backend latency in the product catalog service.
-                                    Optimizing the <span className="font-mono text-indigo-300 bg-indigo-900/30 px-1 rounded">/products</span> endpoint could improve overall conversion rates by estimated 15%.
+                                    {data.ai && data.ai.length > 0
+                                        ? "Detailed AI breakdown of your system performance is available below. Focus on the High Severity findings for immediate impact."
+                                        : "Automated analysis in progress. Once telemetry data is captured and Lighthouse audit completes, real insights will appear here."}
                                 </p>
                             </div>
                         </div>
-                        {data.ai.map((insight, idx) => (
-                            <RecommendationCard
-                                key={idx}
-                                {...insight}
-                            />
-                        ))}
+                        {data.ai && data.ai.length > 0 ? (
+                            data.ai.map((insight, idx) => (
+                                <RecommendationCard
+                                    key={idx}
+                                    {...insight}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-800 rounded-xl">
+                                <Activity className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                                <p className="text-slate-500">No deep AI insights found for this session yet.</p>
+                                <Button
+                                    onClick={handleGenerateAI}
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-4"
+                                >
+                                    Force Regenerate
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

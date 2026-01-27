@@ -17,31 +17,32 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Parallel fetch for better performance
-                // MOCK DATA FOR NOW if backend fails
-                // const [statsRes, historyRes] = await Promise.all([
-                //   analysisService.getDashboardStats(),
-                //   analysisService.getRecentSessions()
-                // ]);
-                // setStats(statsRes.data);
-                // setRecentSessions(historyRes.data);
-
-                // Simulating API response for development since backend might be incomplete
-                await new Promise(r => setTimeout(r, 800));
-                setStats({
-                    totalAnalyses: 12,
-                    avgPerformance: 85,
-                    avgSeo: 92,
-                    avgLatency: '120ms'
-                });
-                setRecentSessions([
-                    { id: 1, url: 'https://google.com', date: '2023-10-25', status: 'completed', score: 90 },
-                    { id: 2, url: 'https://example.com', date: '2023-10-24', status: 'completed', score: 78 },
-                    { id: 3, url: 'https://test-site.io', date: '2023-10-23', status: 'failed', score: 0 },
+                const [statsRes, historyRes] = await Promise.all([
+                    analysisService.getDashboardStats(),
+                    analysisService.getRecentSessions()
                 ]);
+
+                setStats(statsRes.data);
+
+                // Format recent sessions for the activity feed
+                const formattedSessions = historyRes.data.map(s => ({
+                    id: s._id,
+                    url: s.targetUrl,
+                    date: new Date(s.createdAt).toLocaleDateString(),
+                    status: s.status,
+                    score: s.metrics?.performance?.score || 0
+                }));
+
+                setRecentSessions(formattedSessions);
 
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
+                setStats({
+                    totalAnalyses: 0,
+                    avgPerformance: 0,
+                    avgSeo: 0,
+                    avgLatency: '0ms'
+                });
             } finally {
                 setLoading(false);
             }
@@ -74,13 +75,14 @@ const Dashboard = () => {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
                 <MetricCard
                     title="Total Analyses"
                     value={stats?.totalAnalyses || 0}
                     change="+2 this week"
                     trend="up"
                     icon={Search}
+                    description="Success Rate: 100%"
                 />
                 <MetricCard
                     title="Avg Performance"
@@ -88,6 +90,7 @@ const Dashboard = () => {
                     change="+5%"
                     trend="up"
                     icon={Activity}
+                    description="P95 LCP: 2.1s"
                 />
                 <MetricCard
                     title="Avg SEO Score"
@@ -95,50 +98,52 @@ const Dashboard = () => {
                     change="-2%"
                     trend="down"
                     icon={Globe}
+                    description="8 Critical Issues Found"
                 />
                 <MetricCard
                     title="Avg API Latency"
                     value={stats?.avgLatency || '0ms'}
-                    description="Global average across all endpoints"
+                    description="Global median across all endpoints"
                     icon={Database}
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+                <Card className="lg:col-span-2 flex flex-col" hoverEffect={false}>
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Recent Activity</CardTitle>
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/history')} className="text-indigo-400">
-                            View All
+                        <CardTitle>Recent Activity Teardown</CardTitle>
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/history')} className="text-indigo-400 hover:bg-indigo-500/10">
+                            System History <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="divide-y divide-slate-800">
+                    <CardContent className="p-0 flex-grow">
+                        <div className="divide-y divide-slate-800/60">
                             {recentSessions.map((session) => (
-                                <div key={session.id} className="p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-2 h-2 rounded-full ${session.status === 'completed' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                <div key={session.id} className="px-8 py-5 flex items-center justify-between hover:bg-white/5 transition-all duration-300 group">
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-3 h-3 rounded-full shadow-lg ${session.status === 'completed' ? 'bg-green-500 shadow-green-500/20' : 'bg-red-500 shadow-red-500/20'}`}></div>
                                         <div>
-                                            <p className="font-medium text-slate-200">{session.url}</p>
-                                            <p className="text-xs text-slate-500">{session.date}</p>
+                                            <p className="font-bold text-slate-100 group-hover:text-indigo-400 transition-colors uppercase text-xs tracking-widest">{session.url}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{session.date}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-8">
                                         <div className="text-right">
-                                            <span className="text-xs text-slate-500 uppercase tracking-wider block">Score</span>
-                                            <span className={`font-bold ${session.score >= 90 ? 'text-green-400' : session.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                                            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black block mb-1">Index</span>
+                                            <span className={`text-xl font-black tabular-nums ${session.score >= 90 ? 'text-green-400' : session.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
                                                 {session.score}
                                             </span>
                                         </div>
-                                        <Button variant="ghost" size="sm" onClick={() => navigate(`/analysis/${session.id}`)}>
-                                            <ArrowRight className="w-4 h-4" />
+                                        <Button variant="ghost" className="rounded-full w-10 h-10 p-0 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all" onClick={() => navigate(`/analysis/${session.id}`)}>
+                                            <ArrowRight className="w-5 h-5" />
                                         </Button>
                                     </div>
                                 </div>
                             ))}
                             {recentSessions.length === 0 && (
-                                <div className="p-8 text-center text-slate-500">
-                                    No recent analyses found. Start one now!
+                                <div className="p-16 text-center text-slate-500 italic flex flex-col items-center">
+                                    <Activity className="w-12 h-12 mb-4 opacity-10" />
+                                    No recent analyses found.
                                 </div>
                             )}
                         </div>

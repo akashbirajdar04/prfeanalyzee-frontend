@@ -36,7 +36,7 @@ const RecommendationCard = ({
                         </Badge>
                         <h4 className="font-semibold text-slate-200">{title}</h4>
                     </div>
-                    <p className="text-slate-400 text-sm mb-3 leading-relaxed">
+                    <p className="text-slate-400 text-sm mb-3 leading-relaxed whitespace-pre-line">
                         {description}
                     </p>
                     {suggestedFix && (

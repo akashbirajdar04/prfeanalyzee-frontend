@@ -22,9 +22,7 @@ const analysisService = {
     },
 
     getDashboardStats: async () => {
-        // If backend doesn't have a dedicated stats endpoint, we might compute from history
-        // But assuming a stats endpoint exists for efficiency
-        return api.get('/dashboard/stats');
+        return api.get('/analysis/stats');
     }
 };
 
