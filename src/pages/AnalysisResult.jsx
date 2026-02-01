@@ -230,7 +230,7 @@ const AnalysisResult = () => {
                                         <p className="text-slate-500 text-xs mb-3">Paste this at the VERY TOP of your `index.js` or `app.js` file before any other imports.</p>
                                         <div className="bg-black/40 p-4 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 relative group">
                                             <pre className="overflow-x-auto">
-                                                {`import { startSDK } from 'ai-perf-sdk';
+                                                {`import { startSDK, shutdownSDK } from 'ai-perf-sdk';
 
 startSDK({
   serviceName: 'user-service',
@@ -238,7 +238,16 @@ startSDK({
   headers: {
     'x-session-id': '${id}'
   }
-});`}
+});
+
+const shutdown = async () => {
+    console.log("[SDK-INIT] Cleaning up...");
+    await shutdownSDK();
+    process.exit(0);
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);`}
                                             </pre>
                                         </div>
                                     </div>
