@@ -9,9 +9,8 @@ const LandingPage = () => {
             <nav className="fixed w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/5">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <BarChart3 className="w-8 h-8 text-indigo-500" />
                         <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-                            PerfAI
+                            PerafAI
                         </span>
                     </div>
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
@@ -178,7 +177,7 @@ const LandingPage = () => {
                 <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
                     <h2 className="text-4xl font-bold mb-6">Ready to speed up your website?</h2>
                     <p className="text-xl text-slate-400 mb-10">
-                        Join thousands of developers using PerfAI to build faster, efficient, and user-friendly web experiences.
+                        Join thousands of developers using PerafAI to build faster, efficient, and user-friendly web experiences.
                     </p>
                     <Link to="/register">
                         <Button size="lg" className="h-16 px-10 rounded-full text-lg shadow-2xl shadow-indigo-500/30">
@@ -193,8 +192,7 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
                         <div className="flex items-center gap-2 mb-4 text-slate-200">
-                            <BarChart3 className="w-6 h-6 text-indigo-500" />
-                            <span className="font-bold text-lg">PerfAI</span>
+                            <span className="font-bold text-lg">PerafAI</span>
                         </div>
                         <p>Making the web faster, one site at a time.</p>
                     </div>
@@ -223,7 +221,7 @@ const LandingPage = () => {
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-white/5 text-center">
-                    &copy; 2026 PerfAI Inc. All rights reserved.
+                    &copy; 2026 PerafAI Inc. All rights reserved.
                 </div>
             </footer>
         </div>

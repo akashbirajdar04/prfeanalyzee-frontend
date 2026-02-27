@@ -1,8 +1,3 @@
-
----
-
-### ⚡ PerafAI Frontend README
-```markdown
 # PerafAI Frontend ⚡ (Intelligence Dashboard)
 
 The visual interface for the **PerafAI** performance system. This dashboard allows users to trigger audits, visualize Core Web Vitals, and interact with AI-generated performance insights.
@@ -24,3 +19,26 @@ The visual interface for the **PerafAI** performance system. This dashboard allo
 ### 1. Installation
 ```bash
 npm install
+```
+
+### 2. Environment Setup
+Create a `.env` file:
+```env
+VITE_API_URL=https://prfeai-backend.onrender.com/api
+```
+
+### 3. Development
+```bash
+npm run dev
+```
+
+### 4. Build for Production
+```bash
+npm run build
+```
+
+## 🌐 Deployment
+Optimized for deployment on **Render**, **Vercel**, or **Netlify**. Ensure `VITE_API_URL` is set in your build environment.
+
+---
+Part of the [PerafAI Ecosystem](https://prfeai-backend.onrender.com).
